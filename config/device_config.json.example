@@ -1,0 +1,37 @@
+{
+  "device": {
+    "id": "raspberry_pi_001",
+    "name": "Raspberry Pi CSI Collector",
+    "location": "room_101",
+    "version": "1.0.0"
+  },
+  "csi_collection": {
+    "interface": "wlan0",
+    "port": 5500,
+    "baseline_duration": 180,
+    "window_size": 60,
+    "channel_width": "80MHz"
+  },
+  "server": {
+    "url": "http://192.168.1.100:8000",
+    "api_key": "your_api_key_here",
+    "timeout": 30,
+    "retry_attempts": 3,
+    "retry_delay": 5
+  },
+  "storage": {
+    "base_dir": "/home/pi/respiration_data",
+    "raw_csi_dir": "/home/pi/respiration_data/raw_csi",
+    "baseline_dir": "/home/pi/respiration_data/baseline",
+    "logs_dir": "/home/pi/respiration_data/logs"
+  },
+  "logging": {
+    "level": "INFO",
+    "max_file_size": "10MB",
+    "backup_count": 5
+  },
+  "schedule": {
+    "data_collection_interval": 300,
+    "baseline_collection_time": "02:00"
+  }
+} 
