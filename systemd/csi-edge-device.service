@@ -1,0 +1,16 @@
+[Unit]
+Description=CSI Edge Device Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/csi-edge-device
+ExecStart=/usr/bin/python3 /home/pi/csi-edge-device/main.py --mode schedule
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target 
