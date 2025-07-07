@@ -1,30 +1,34 @@
 #!/bin/bash
 
-echo "=== CSI Edge Device Setup ==="
+echo "CSI Edge Device セットアップを開始します..."
 
-# 必要なディレクトリの作成
-mkdir -p logs data
-
-# Python依存関係のインストール
-echo "Installing Python dependencies..."
+# 依存関係のインストール
+echo "依存関係をインストールしています..."
 pip3 install -r requirements.txt
 
-# 設定ファイルの確認
+# 設定ファイルの作成
+echo "設定ファイルを作成しています..."
 if [ ! -f "config/device_config.json" ]; then
-    echo "Please copy config/device_config.json.example to config/device_config.json and edit it"
-    echo "cp config/device_config.json.example config/device_config.json"
-    exit 1
+    cp config/device_config.json.example config/device_config.json
+    echo "設定ファイルを作成しました: config/device_config.json"
+    echo "必要に応じて設定を編集してください。"
+else
+    echo "設定ファイルは既に存在します: config/device_config.json"
 fi
 
-# tcpdumpの権限確認
-echo "Checking tcpdump permissions..."
-if ! sudo tcpdump --version > /dev/null 2>&1; then
-    echo "Error: tcpdump not found or no sudo access"
-    exit 1
-fi
+# ディレクトリの作成
+echo "必要なディレクトリを作成しています..."
+mkdir -p data logs
 
-echo "=== Setup Complete ==="
-echo "Next steps:"
-echo "1. Edit config/device_config.json with your settings"
-echo "2. Test with: python3 main.py --mode collect"
-echo "3. Run in production: python3 main.py --mode schedule" 
+# 権限の設定
+echo "実行権限を設定しています..."
+chmod +x main.py
+chmod +x setup.sh
+chmod +x deploy.sh
+
+echo "セットアップが完了しました！"
+echo ""
+echo "次の手順:"
+echo "1. config/device_config.json を編集して設定を確認"
+echo "2. csi-analysis-server を起動: cd ../csi-analysis-server && docker-compose up --build"
+echo "3. エッジデバイスを起動: python3 main.py --mode schedule" 

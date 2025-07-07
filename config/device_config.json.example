@@ -1,7 +1,9 @@
 {
   "device_id": "raspberry_pi_001",
-  "server_url": "http://192.168.1.100:8000",
-  "api_key": "your_api_key_here",
+  "server_url": "http://localhost:8000",
+  "api_key": "test-key-123",
   "collection_interval": 300,
-  "base_duration": 180
+  "base_duration": 180,
+  "channel_width": "80MHz",
+  "location": "lab_room_1"
 } 

@@ -221,7 +221,9 @@ class EdgeDeviceManager:
                 'type': data_type,
                 'device_id': self.config['device_id'],
                 'timestamp': int(time.time()),
-                'collection_duration': 60 if data_type == "csi_measurement" else self.config.get('base_duration', 180)
+                'collection_duration': 60 if data_type == "csi_measurement" else self.config.get('base_duration', 180),
+                'channel_width': self.config.get('channel_width', '80MHz'),
+                'location': self.config.get('location', 'unknown')
             }
             
             # ファイルの送信
@@ -241,6 +243,8 @@ class EdgeDeviceManager:
             if response.status_code == 200:
                 result = response.json()
                 self.logger.info(f"ファイル送信が成功しました: {result.get('message', 'Success')}")
+                if result.get('ipfs_hash'):
+                    self.logger.info(f"IPFSハッシュ: {result['ipfs_hash']}")
                 return True
             else:
                 self.logger.warning(f"送信失敗 (HTTP {response.status_code}): {response.text}")
