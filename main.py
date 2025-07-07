@@ -230,7 +230,7 @@ class EdgeDeviceManager:
             with open(pcap_file_path, 'rb') as f:
                 files = {'file': (os.path.basename(pcap_file_path), f, 'application/octet-stream')}
                 data = {'metadata': json.dumps(metadata)}
-                headers = {'X-API-Key': self.config['api_key']}
+                headers = {'Authorization': f"Bearer {self.config['api_key']}"}
                 
                 response = requests.post(
                     f"{self.config['server_url']}/breathing-analysis/upload-csi",
