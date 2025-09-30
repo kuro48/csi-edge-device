@@ -219,7 +219,6 @@ class EdgeDeviceManager:
             # メタデータの作成
             metadata = {
                 'type': data_type,
-                'device_id': self.config['device_id'],
                 'timestamp': int(time.time()),
                 'collection_duration': 60 if data_type == "csi_measurement" else self.config.get('base_duration', 180),
                 'channel_width': self.config.get('channel_width', '80MHz'),
@@ -229,11 +228,14 @@ class EdgeDeviceManager:
             # ファイルの送信
             with open(pcap_file_path, 'rb') as f:
                 files = {'file': (os.path.basename(pcap_file_path), f, 'application/octet-stream')}
-                data = {'metadata': json.dumps(metadata)}
+                data = {
+                    'device_id': self.config['device_id'],
+                    'metadata': json.dumps(metadata)
+                    }
                 headers = {'Authorization': f"Bearer {self.config['api_key']}"}
                 
                 response = requests.post(
-                    f"{self.config['server_url']}/breathing-analysis/upload-csi",
+                    f"{self.config['server_url']}/api/v2/csi-data/upload",
                     files=files,
                     data=data,
                     headers=headers,
