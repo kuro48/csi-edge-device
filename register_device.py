@@ -160,7 +160,7 @@ class DeviceRegistration:
 
 def main():
     parser = argparse.ArgumentParser(description="デバイス登録スクリプト")
-    parser.add_argument("--server", type=str, default="http://192.168.101.168:8000", help="APIサーバーURL")
+    parser.add_argument("--server", type=str, default="http://api.csi.kur048.com", help="APIサーバーURL")
     parser.add_argument("--device-id", type=str, required=True, help="デバイスID")
     parser.add_argument("--device-name", type=str, help="デバイス名")
     parser.add_argument("--location", type=str, default="lab", help="設置場所")

@@ -1,6 +1,6 @@
 {
   "device_id": "raspberry_pi_001",
-  "server_url": "http://192.168.101.168:8000",
+  "server_url": "http://api.csi.kur048.com",
   "device_token": "device_raspberry_pi_001_abc123def456",
   "collection_interval": 300,
   "collection_duration": 60,
