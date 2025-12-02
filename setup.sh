@@ -62,9 +62,7 @@ echo "🔐 デバイス登録を実行中..."
 python3 register_device.py \
     --server "$server_url" \
     --username "$username" \
-    --password "$password" \
     --device-id "$device_id" \
-    --name "CSIエッジデバイス" \
     --location "lab"
 
 if [ $? -eq 0 ]; then
