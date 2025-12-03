@@ -272,9 +272,6 @@ class EdgeDeviceManager:
 
             # リクエストの準備
             url = f"{self.config['server_url']}/api/v2/csi-data/upload"
-            headers = {
-                'Authorization': f"Bearer {self.config['device_token']}"
-            }
 
             # ファイルの送信
             with open(pcap_file_path, 'rb') as f:
@@ -282,6 +279,7 @@ class EdgeDeviceManager:
                     'file': (os.path.basename(pcap_file_path), f, 'application/octet-stream')
                 }
                 data = {
+                    'device_id': self.config['device_id'],
                     'collection_start_time': collection_start_time.isoformat(),
                     'collection_duration': collection_duration,
                     'metadata': json.dumps(metadata)
@@ -293,7 +291,6 @@ class EdgeDeviceManager:
                     url,
                     files=files,
                     data=data,
-                    headers=headers,
                     timeout=self.config.get('upload_timeout', 60)
                 )
 
