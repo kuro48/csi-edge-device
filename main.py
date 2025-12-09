@@ -78,15 +78,11 @@ class EdgeDeviceManager:
 
     def _validate_config(self):
         """設定ファイルの検証"""
-        required_fields = ['device_id', 'server_url', 'device_token']
+        required_fields = ['device_id', 'server_url']
 
         for field in required_fields:
             if field not in self.config:
                 raise ValueError(f"必須設定項目が不足しています: {field}")
-
-        # デバイストークンの形式チェック
-        if not self.config['device_token'].startswith('device_'):
-            raise ValueError("デバイストークンの形式が正しくありません")
 
         self.logger.info("設定ファイルの検証が完了しました")
 
@@ -350,11 +346,8 @@ class EdgeDeviceManager:
         """
         try:
             url = f"{self.config['server_url']}/api/v2/devices/{self.config['device_id']}"
-            headers = {
-                'Authorization': f"Bearer {self.config['device_token']}"
-            }
 
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, timeout=10)
 
             if response.status_code == 200:
                 device_info = response.json()

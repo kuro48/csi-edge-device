@@ -22,7 +22,6 @@ echo "📄 使用する設定ファイル: $CONFIG_FILE"
 
 # 設定ファイルから情報を取得
 SERVER_URL=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['server_url'])")
-DEVICE_TOKEN=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['device_token'])")
 DEVICE_ID=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['device_id'])")
 
 echo "🔗 サーバーURL: $SERVER_URL"
@@ -54,7 +53,6 @@ echo ""
 echo "📤 データアップロード中..."
 
 RESPONSE=$(curl -s -X POST "$SERVER_URL/api/v2/csi-data/upload" \
-    -H "Authorization: Bearer $DEVICE_TOKEN" \
     -F "file=@$SAMPLE_FILE" \
     -F "device_id=$DEVICE_ID" \
     -F "collection_start_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \

@@ -78,7 +78,7 @@ class DeviceRegistration:
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"デバイス登録に成功しました: {result.get('device_id')}")
+                print(f"デバイス登録に成功しました: {result.get('id')}")
                 return result
             else:
                 print(f"デバイス登録に失敗しました (HTTP {response.status_code}): {response.text}")
@@ -127,16 +127,9 @@ class DeviceRegistration:
             output_file: 出力ファイルパス
         """
         try:
-            # デバイストークンの生成（メタデータから取得）
-            device_token = device_info.get('metadata', {}).get('device_token')
-            if not device_token:
-                print("警告: デバイストークンが見つかりません")
-                device_token = f"device_{device_info['device_id']}_PLEASE_SET_TOKEN"
-
             config = {
                 "device_id": device_info['device_id'],
                 "server_url": self.server_url,
-                "device_token": device_token,
                 "collection_interval": 300,
                 "collection_duration": 60,
                 "base_duration": 180,
@@ -207,30 +200,23 @@ def main():
         print("デバイス登録に失敗しました")
         sys.exit(1)
 
-    # 詳細なデバイス情報を取得
-    device_details = registration.get_device_info(access_token, args.device_id)
-    if device_details:
-        print(f"デバイス詳細情報:")
-        print(f"  ID: {device_details.get('device_id')}")
-        print(f"  名前: {device_details.get('device_name')}")
-        print(f"  タイプ: {device_details.get('device_type')}")
-        print(f"  場所: {device_details.get('location')}")
-        print(f"  ステータス: {device_details.get('status')}")
+    # 登録レスポンスから詳細情報を表示
+    print(f"デバイス詳細情報:")
+    print(f"  ID: {result.get('device_id')}")
+    print(f"  UUID: {result.get('id')}")
+    print(f"  名前: {result.get('device_name')}")
+    print(f"  場所: {result.get('location')}")
+    print(f"  ステータス: {result.get('status')}")
 
-        # 設定ファイルの生成
-        registration.generate_config_file(device_details, args.config_output)
+    # 設定ファイルの生成
+    registration.generate_config_file(result, args.config_output)
 
-        print("\n✅ デバイス登録が完了しました!")
-        print(f"設定ファイル: {args.config_output}")
-        print("\n次のステップ:")
-        print("1. 生成された設定ファイルを確認してください")
-        print("2. デバイストークンが正しく設定されているか確認してください")
-        print("3. main_improved.py を使用してCSIデータの収集を開始してください")
-        print(f"   python3 main_improved.py --config {args.config_output} --mode test")
-
-    else:
-        print("デバイス情報の取得に失敗しました")
-        sys.exit(1)
+    print("\n✅ デバイス登録が完了しました!")
+    print(f"設定ファイル: {args.config_output}")
+    print("\n次のステップ:")
+    print("1. 生成された設定ファイルを確認してください")
+    print("2. main.py を使用してCSIデータの収集を開始してください")
+    print(f"   python3 main.py --config {args.config_output} --mode test")
 
 
 if __name__ == "__main__":
