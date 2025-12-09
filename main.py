@@ -108,7 +108,7 @@ class SimpleCSICollector:
         try:
             server_url = self.config['server_url']
             device_id = self.config['device_id']
-            endpoint = f"{server_url}/api/v2/csi-data/upload"
+            endpoint = f"{server_url}/api/v2/csi-data/upload-public"
 
             # ファイルアップロード
             with open(filepath, 'rb') as f:
