@@ -12,6 +12,10 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+import urllib3
+
+# SSL警告を抑制
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ロギング設定
 logging.basicConfig(
@@ -122,7 +126,8 @@ class SimpleCSICollector:
                     endpoint,
                     files=files,
                     data=data,
-                    timeout=60
+                    timeout=60,
+                    verify=False  # SSL検証を無効化（開発環境用）
                 )
 
                 if response.status_code == 200:
