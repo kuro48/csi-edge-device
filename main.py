@@ -106,17 +106,29 @@ class SimpleCSICollector:
             return False
 
         try:
-            server_url = self.config['server_url']
-            endpoint = f"{server_url}/api/v2/csi-data/upload-public"
+            server_url = self.config['server_url'].rstrip('/')
+            endpoint = f"{server_url}/api/v2/csi-data/upload"
 
             # ファイルアップロード
             with open(filepath, 'rb') as f:
                 files = {
                     'file': (Path(filepath).name, f, 'application/vnd.tcpdump.pcap')
                 }
+
+                metadata = {
+                    "type": "csi_measurement",
+                    "device_id": self.config.get("device_id"),
+                    "channel_width": self.config.get("channel_width"),
+                    "location": self.config.get("location"),
+                    "network_interface": self.config.get("network_interface"),
+                    "csi_port": self.config.get("csi_port"),
+                }
+                metadata = {k: v for k, v in metadata.items() if v is not None}
+
                 data = {
                     'collection_start_time': datetime.now().isoformat(),
-                    'collection_duration': self.config.get('collection_duration', 60)
+                    'collection_duration': self.config.get('collection_duration', 60),
+                    'metadata': json.dumps(metadata)
                 }
 
                 logger.info(f"Uploading to {endpoint}...")
