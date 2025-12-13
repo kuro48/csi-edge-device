@@ -1,11 +1,9 @@
 {
-  "device_id": "raspberry_pi_001",
   "server_url": "http://api.csi.kur048.com",
   "collection_interval": 300,
   "collection_duration": 60,
   "base_duration": 180,
   "channel_width": "80MHz",
-  "location": "lab_room_1",
   "network_interface": "wlan0",
   "csi_port": 5500,
   "upload_timeout": 60,

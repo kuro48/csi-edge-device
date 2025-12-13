@@ -96,7 +96,8 @@ python3 main.py --config config/device_config.json --mode schedule
 
 ```
 csi-edge-device/
-├── main.py                   # メインプログラム
+├── main.py                   # メインプログラム（通常CSI収集）
+├── collect_base.py          # ベースCSI収集プログラム
 ├── register_device.py        # デバイス登録スクリプト
 ├── setup.sh                  # セットアップスクリプト（推奨）
 ├── test_upload.sh           # テストスクリプト
@@ -136,12 +137,11 @@ python3 main.py --mode test
 # 単発でCSIデータ収集・送信
 python3 main.py --mode collect
 
-# ベースラインデータ収集
-python3 main.py --mode base
-
 # スケジュール実行（常時稼働）
 python3 main.py --mode schedule
 ```
+
+**注**: ベースCSI収集は専用スクリプト `collect_base.py` を使用してください（下記参照）。
 
 ### デバイス情報の確認
 
@@ -149,6 +149,102 @@ python3 main.py --mode schedule
 # デバイスステータスを確認
 python3 main.py --mode status
 ```
+
+### ベースCSI（基準データ）の収集
+
+**重要**: ベースCSIは、監視エリアに**人物がいない状態**で収集する必要があります。
+
+#### ベースCSIとは？
+
+ベースCSI（基準データ）は、Wi-Fi環境の基準状態を定義するデータです：
+
+| 用途 | 説明 |
+|------|------|
+| **キャリブレーション** | Wi-Fi環境の基準状態を定義 |
+| **ノイズフロア測定** | 人物がいない状態のCSIパターン |
+| **比較基準** | 測定データとの相対値計算用 |
+| **呼吸検出の基準化** | 人物有無の判定基準 |
+
+#### ベースCSI収集手順
+
+```bash
+# 1. 監視エリアから人を退避させる
+# 2. 環境を安定させる（物の移動や設定変更をしない）
+# 3. ベースCSI収集スクリプトを実行
+
+python3 collect_base.py
+```
+
+#### 実行内容
+
+- **収集時間**: デフォルト180秒（3分間）
+  - 設定ファイルの`base_duration`で変更可能
+- **データタイプ**: `type: "base"` として自動的にサーバーに送信
+- **ファイル名**: `data/base_csi_YYYYmmdd_HHMMSS.pcap`
+
+#### 実行例
+
+```bash
+$ python3 collect_base.py
+
+============================================================
+🎯 BASE CSI COLLECTION AND UPLOAD
+============================================================
+
+📋 Instructions:
+   1. Ensure NO PERSON is in the monitoring area
+   2. Keep the environment stable during collection
+   3. Do not move objects or change room configuration
+
+⏱️  Waiting 5 seconds before starting...
+   Press Ctrl+C to cancel if needed
+
+============================================================
+⚠️  IMPORTANT: Ensure NO PERSON is in the monitoring area
+============================================================
+Starting BASE CSI collection: 180s on wlan0:5500
+Collection will take approximately 3.0 minutes
+============================================================
+
+Collection in progress...
+(This process will run for the configured duration)
+
+✅ Base CSI data collected successfully
+   File: base_csi_20250112_143022.pcap
+   Size: 3,145,728 bytes (3.00 MB)
+   Duration: 180.2s
+
+============================================================
+Uploading BASE CSI to http://api.csi.kur048.com/api/v2/csi-data/upload-public...
+============================================================
+
+✅ Upload successful
+   File: base_csi_20250112_143022.pcap
+   Response ID: 12345
+   Type: BASE CSI
+
+============================================================
+✅ BASE CSI COLLECTION AND UPLOAD COMPLETED
+============================================================
+```
+
+#### 設定オプション
+
+`config/device_config.json` で以下を設定できます：
+
+```json
+{
+  "base_duration": 180,              // ベースCSI収集時間（秒）
+  "delete_after_upload": false       // 送信後にローカルファイルを削除するか
+}
+```
+
+#### 推奨実施タイミング
+
+- システム初回セットアップ時
+- 設置場所を変更した場合
+- Wi-Fi環境に大きな変更があった場合（ルーター交換など）
+- 定期的なキャリブレーション（月1回程度）
 
 ## API連携
 

@@ -107,7 +107,6 @@ class SimpleCSICollector:
 
         try:
             server_url = self.config['server_url']
-            device_id = self.config['device_id']
             endpoint = f"{server_url}/api/v2/csi-data/upload-public"
 
             # ファイルアップロード
@@ -116,7 +115,6 @@ class SimpleCSICollector:
                     'file': (Path(filepath).name, f, 'application/vnd.tcpdump.pcap')
                 }
                 data = {
-                    'device_id': device_id,
                     'collection_start_time': datetime.now().isoformat(),
                     'collection_duration': self.config.get('collection_duration', 60)
                 }
