@@ -2,46 +2,62 @@
 """
 既存のpcapファイルをアップロードするテストスクリプト
 """
-import sys
 import argparse
-from main import EdgeDeviceManager
+import json
+from datetime import datetime
+from pathlib import Path
+
+import requests
 
 
-def main():
+def load_config(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="CSIデータアップロードテスト")
-    parser.add_argument("--config", type=str, default="config/production_config.json", help="設定ファイルのパス")
+    parser.add_argument("--config", type=str, default="config/device_config.json", help="設定ファイルのパス")
     parser.add_argument("--file", type=str, required=True, help="アップロードするpcapファイルのパス")
-    parser.add_argument("--type", type=str, default="csi_measurement", choices=["csi_measurement", "base"], help="データタイプ")
-
     args = parser.parse_args()
 
-    # エッジデバイスマネージャーの初期化
-    try:
-        manager = EdgeDeviceManager(args.config)
-        print(f"✅ エッジデバイスマネージャーを初期化しました")
-        print(f"   デバイスID: {manager.config['device_id']}")
-        print(f"   サーバーURL: {manager.config['server_url']}")
-    except Exception as e:
-        print(f"❌ 初期化に失敗しました: {e}")
-        sys.exit(1)
+    config = load_config(args.config)
+    file_path = Path(args.file)
 
-    # 接続テスト
-    print("\n🔌 サーバー接続テスト中...")
-    if not manager.test_connection():
-        print("❌ サーバーへの接続に失敗しました")
-        sys.exit(1)
-    print("✅ サーバーへの接続に成功しました")
+    if not file_path.exists():
+        raise SystemExit(f"ファイルが見つかりません: {file_path}")
 
-    # ファイルアップロード
-    print(f"\n📤 ファイルアップロード中: {args.file}")
-    success = manager._send_csi_data(args.file, args.type)
+    server_url = config["server_url"].rstrip("/")
+    endpoint = f"{server_url}/api/v2/csi-data/upload"
 
-    if success:
-        print(f"✅ ファイルのアップロードに成功しました")
-        sys.exit(0)
-    else:
-        print(f"❌ ファイルのアップロードに失敗しました")
-        sys.exit(1)
+    metadata = {
+        "type": "csi_measurement",
+        "device_id": config.get("device_id"),
+        "channel_width": config.get("channel_width"),
+        "location": config.get("location"),
+        "network_interface": config.get("network_interface"),
+        "csi_port": config.get("csi_port")
+    }
+    metadata = {k: v for k, v in metadata.items() if v is not None}
+
+    with open(file_path, "rb") as f:
+        files = {
+            "file": (file_path.name, f, "application/vnd.tcpdump.pcap")
+        }
+        data = {
+            "collection_start_time": datetime.now().isoformat(),
+            "collection_duration": config.get("collection_duration", 60),
+            "metadata": json.dumps(metadata)
+        }
+
+        response = requests.post(endpoint, files=files, data=data, timeout=60, verify=False)
+
+    if response.status_code != 200:
+        raise SystemExit(f"アップロードに失敗しました: {response.status_code} {response.text}")
+
+    result = response.json()
+    print("✅ アップロード成功")
+    print(f"  id: {result.get('id', 'N/A')}")
 
 
 if __name__ == "__main__":

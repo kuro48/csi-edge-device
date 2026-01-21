@@ -5,8 +5,7 @@ Wi-Fi CSI（Channel State Information）を収集してAPIサーバー（v2）�
 ## 主な機能
 
 - **APIサーバーv2対応**: 最新のAPIエンドポイントとスキーマに対応
-- **シンプルな認証**: 研究用に簡略化（デバイス認証不要）
-- **自動デバイス登録**: セットアップスクリプトで簡単に登録
+- **シンプルな運用**: 認証不要のアップロードフロー
 - **エラーハンドリング強化**: 安定した長時間運用
 - **柔軟な設定**: 環境に応じた細かな調整が可能
 
@@ -37,17 +36,14 @@ chmod +x setup.sh
 ```
 
 対話形式で以下を入力します：
-- **サーバーURL**: バックエンドAPIのURL（例: `http://localhost:8000` または `http://api.csi.kur048.com`）
-- **管理者ユーザー名**: デフォルト `admin`
-- **管理者パスワード**: デフォルト `admin123`（初回ログイン後に変更推奨）
+- **サーバーURL**: バックエンドAPIのURL（例: `http://localhost:8000`）
 - **デバイスID**: 一意の識別子（例: `lab-device-001`）
 
 セットアップスクリプトが自動で実行する内容：
 1. Python仮想環境の作成
 2. 依存パッケージのインストール
 3. サーバー稼働確認
-4. デバイス登録
-5. 設定ファイル生成（`config/device_config.json`）
+4. 設定ファイル生成（`config/device_config.json`）
 
 ### 2. 動作確認
 
@@ -58,7 +54,7 @@ chmod +x setup.sh
 source venv/bin/activate
 
 # 接続テスト実行
-python3 main.py --config config/device_config.json --mode test
+python3 test_upload.py --config config/device_config.json --file data/sample.pcap
 ```
 
 #### 2-2. データアップロードテスト
@@ -80,14 +76,14 @@ chmod +x test_upload.sh
 
 ```bash
 # CSIデータを1回収集して送信
-python3 main.py --config config/device_config.json --mode collect
+python3 main.py
 ```
 
 #### 3-2. スケジュール実行（常時稼働）
 
 ```bash
 # スケジュールモードで起動
-python3 main.py --config config/device_config.json --mode schedule
+python3 main.py --mode schedule
 ```
 
 このモードでは、設定ファイルの`collection_interval`（デフォルト: 300秒）ごとにCSIデータを自動収集・送信します。
@@ -98,9 +94,9 @@ python3 main.py --config config/device_config.json --mode schedule
 csi-edge-device/
 ├── main.py                   # メインプログラム（通常CSI収集）
 ├── collect_base.py          # ベースCSI収集プログラム
-├── register_device.py        # デバイス登録スクリプト
 ├── setup.sh                  # セットアップスクリプト（推奨）
 ├── test_upload.sh           # テストスクリプト
+├── test_upload.py           # テストスクリプト（PCAP指定）
 ├── config/
 │   ├── device_config.json          # 設定ファイル
 │   └── device_config.json.example  # 設定例
@@ -128,17 +124,11 @@ csi-edge-device/
 
 ## 使用方法
 
-### モード別実行
+### 実行
 
 ```bash
-# 接続テスト
-python3 main.py --mode test
-
 # 単発でCSIデータ収集・送信
 python3 main.py --mode collect
-
-# スケジュール実行（常時稼働）
-python3 main.py --mode schedule
 ```
 
 **注**: ベースCSI収集は専用スクリプト `collect_base.py` を使用してください（下記参照）。
@@ -146,8 +136,8 @@ python3 main.py --mode schedule
 ### デバイス情報の確認
 
 ```bash
-# デバイスステータスを確認
-python3 main.py --mode status
+# デバイス設定を確認
+cat config/device_config.json
 ```
 
 ### ベースCSI（基準データ）の収集
@@ -251,18 +241,16 @@ Uploading BASE CSI to http://api.csi.kur048.com/api/v2/csi-data/upload-public...
 ### 使用するエンドポイント
 
 - `POST /api/v2/csi-data/upload` - CSIデータアップロード
-- `GET /health` - サーバーヘルスチェック
-- `GET /api/v2/devices/{device_id}` - デバイス情報取得
+- `GET /api/v2/health` - サーバーヘルスチェック
 
 ### 認証方式
 
-**研究用に簡略化**: デバイス認証は不要です。`device_id`でデバイスを識別します。
+**認証不要**: デバイス認証は不要です。`metadata.device_id`で識別します。
 
 ### 送信データ形式
 
 **フォームデータ:**
 - `file`: PCAPファイル（バイナリ）
-- `device_id`: デバイスID
 - `collection_start_time`: 収集開始時刻（ISO 8601）
 - `collection_duration`: 収集時間（秒）
 
@@ -270,6 +258,7 @@ Uploading BASE CSI to http://api.csi.kur048.com/api/v2/csi-data/upload-public...
 ```json
 {
   "type": "csi_measurement",
+  "device_id": "edge-device-001",
   "timestamp": 1640995200,
   "collection_duration": 60,
   "channel_width": "80MHz",
@@ -302,22 +291,15 @@ sudo journalctl -u csi-edge-device -f
 ### デバイス登録エラー
 
 ```bash
-# サーバー側でデバイス登録を確認
-# まずユーザーログイン
-curl -X POST http://localhost:8000/api/v2/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"username":"admin","password":"admin123"}'
-
-# デバイス一覧取得
-curl -X GET http://localhost:8000/api/v2/devices/ \
-     -H "Authorization: Bearer <取得したトークン>"
+# サーバー疎通確認
+curl http://localhost:8000/api/v2/health
 ```
 
 ### 接続エラー
 
 ```bash
 # サーバーのヘルスチェック
-curl http://api.csi.kur048.com/health
+curl http://api.csi.kur048.com/api/v2/health
 
 # ネットワーク接続確認
 ping api.csi.kur048.com
@@ -327,7 +309,7 @@ ping api.csi.kur048.com
 
 ```bash
 # sudo権限で実行されているか確認
-sudo python3 main.py --mode collect
+sudo python3 main.py
 
 # ネットワークインターフェースの確認
 ip link show
@@ -363,23 +345,10 @@ pip install -r requirements.txt
 python3 -c "import json; json.load(open('config/device_config.json'))"
 ```
 
-### 手動でデバイス登録
-
-```bash
-python3 register_device.py \
-    --server http://api.csi.kur048.com \
-    --username admin \
-    --password <password> \
-    --device-id my_device \
-    --name "マイデバイス" \
-    --location "研究室"
-```
-
 ## 依存関係
 
 - Python 3.7以上
 - requests
-- schedule
 - tcpdump（CSIデータ収集用）
 
 ## ライセンス

@@ -4,6 +4,7 @@ CSI Edge Device - Simplified Version
 シンプルなCSIデータ収集とアップロード
 """
 
+import argparse
 import json
 import logging
 import subprocess
@@ -153,6 +154,29 @@ class SimpleCSICollector:
             logger.error(f"Failed to upload CSI data: {e}")
             return False
 
+    def test_connection(self) -> bool:
+        """サーバーのヘルスチェック"""
+        try:
+            server_url = self.config['server_url'].rstrip('/')
+            endpoint = f"{server_url}/api/v2/health"
+            response = requests.get(endpoint, timeout=10, verify=False)
+            if response.status_code == 200:
+                logger.info("Server health check OK")
+                return True
+            logger.error(f"Health check failed: {response.status_code} - {response.text}")
+            return False
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            return False
+
+    def run_schedule(self) -> None:
+        """定期収集モードで実行"""
+        interval = self.config.get('collection_interval', 300)
+        logger.info(f"Schedule mode started: interval={interval}s")
+        while True:
+            self.run()
+            time.sleep(interval)
+
     def run(self):
         """CSI収集とアップロードを実行"""
         logger.info("=" * 50)
@@ -186,8 +210,20 @@ class SimpleCSICollector:
 def main():
     """メイン処理"""
     try:
-        collector = SimpleCSICollector()
-        collector.run()
+        parser = argparse.ArgumentParser(description="CSI Edge Device Collector")
+        parser.add_argument("--config", type=str, default="config/device_config.json", help="設定ファイルのパス")
+        parser.add_argument("--mode", type=str, default="collect", choices=["collect", "schedule", "test"], help="実行モード")
+        args = parser.parse_args()
+
+        collector = SimpleCSICollector(config_path=args.config)
+
+        if args.mode == "test":
+            ok = collector.test_connection()
+            raise SystemExit(0 if ok else 1)
+        if args.mode == "schedule":
+            collector.run_schedule()
+        else:
+            collector.run()
 
     except KeyboardInterrupt:
         logger.info("Interrupted by user")

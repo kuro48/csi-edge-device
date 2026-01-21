@@ -22,7 +22,7 @@ source venv/bin/activate
 # 依存関係のインストール
 echo "📥 依存関係をインストール中..."
 pip install -q --upgrade pip
-pip install -q requests schedule
+pip install -q -r requirements.txt
 
 # サーバーURLの入力
 echo ""
@@ -31,49 +31,41 @@ server_url=${server_url:-http://api.csi.kur048.com}
 
 # サーバーの稼働確認
 echo "🔍 サーバーの稼働確認中..."
-if ! curl -s "$server_url/health" > /dev/null; then
+if ! curl -s "$server_url/api/v2/health" > /dev/null; then
     echo "❌ エラー: サーバーに接続できません: $server_url"
     exit 1
 fi
 
 echo "✅ サーバーは正常に稼働しています"
 
-# 管理者認証情報の入力
-echo ""
-echo "📝 管理者アカウントでログインしてデバイスを登録します"
-read -p "ユーザー名 [admin]: " username
-username=${username:-admin}
-
-read -sp "パスワード: " password
-echo ""
-
-if [ -z "$password" ]; then
-    password="admin123"
-fi
-
 # デバイスIDの入力
 echo ""
 read -p "デバイスID [test_device_001]: " device_id
 device_id=${device_id:-test_device_001}
 
-# デバイス登録
+# 設定ファイル生成
 echo ""
-echo "🔐 デバイス登録を実行中..."
-python3 register_device.py \
-    --server "$server_url" \
-    --username "$username" \
-    --device-id "$device_id" \
-    --location "lab"
+echo "📝 設定ファイルを生成します..."
+mkdir -p config
+cat > config/device_config.json <<EOF
+{
+  "device_id": "${device_id}",
+  "server_url": "${server_url}",
+  "collection_interval": 300,
+  "collection_duration": 60,
+  "base_duration": 180,
+  "channel_width": "80MHz",
+  "network_interface": "wlan0",
+  "csi_port": 5500,
+  "upload_timeout": 60,
+  "health_check_interval": 3600,
+  "delete_after_upload": false
+}
+EOF
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "✅ セットアップが完了しました！"
-    echo ""
-    echo "次のコマンドでデバイスを起動できます:"
-    echo "  source venv/bin/activate"
-    echo "  python3 main.py --config config/device_config.json"
-else
-    echo ""
-    echo "❌ デバイス登録に失敗しました"
-    exit 1
-fi
+echo ""
+echo "✅ セットアップが完了しました！"
+echo ""
+echo "次のコマンドでデバイスを起動できます:"
+echo "  source venv/bin/activate"
+echo "  python3 main.py"

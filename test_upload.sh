@@ -30,7 +30,7 @@ echo "🆔 デバイスID: $DEVICE_ID"
 # サーバーのヘルスチェック
 echo ""
 echo "🔍 サーバーのヘルスチェック中..."
-if ! curl -s "$SERVER_URL/health" > /dev/null; then
+if ! curl -s "$SERVER_URL/api/v2/health" > /dev/null; then
     echo "❌ エラー: サーバーに接続できません"
     exit 1
 fi
@@ -54,9 +54,9 @@ echo "📤 データアップロード中..."
 
 RESPONSE=$(curl -s -X POST "$SERVER_URL/api/v2/csi-data/upload" \
     -F "file=@$SAMPLE_FILE" \
-    -F "device_id=$DEVICE_ID" \
     -F "collection_start_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    -F "collection_duration=60")
+    -F "collection_duration=60" \
+    -F "metadata={\"device_id\":\"$DEVICE_ID\"}")
 
 echo ""
 if echo "$RESPONSE" | grep -q '"id"'; then
