@@ -53,7 +53,7 @@ cat > config/device_config.json <<EOF
   "server_url": "${server_url}",
   "collection_interval": 300,
   "collection_duration": 60,
-  "base_duration": 180,
+  "base_duration": 60,
   "channel_width": "80MHz",
   "network_interface": "wlan0",
   "csi_port": 5500,
