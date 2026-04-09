@@ -74,10 +74,12 @@ def main() -> None:
 
     result = response.json()
     csi_data_id = result.get('id')
+    upload_status = result.get('status', 'unknown')
 
     print("✅ アップロード成功")
     print(f"  id: {csi_data_id or 'N/A'}")
-    print(f"  initial_status: {result.get('status', 'unknown')}")
+    print(f"  upload_status: {upload_status}")
+    print("  server_analysis: started in background")
     delete_local_file(file_path)
 
 

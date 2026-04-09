@@ -128,6 +128,7 @@ csi-edge-device/
 ```bash
 # 単発でCSIデータ収集・送信
 # 送信成功後、ローカルPCAPは自動削除される
+# レスポンスにはアップロード受付状態のみ含まれ、解析はサーバー側で継続する
 python3 main.py --mode collect
 ```
 

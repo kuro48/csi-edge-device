@@ -161,9 +161,11 @@ class SimpleCSICollector:
 
             result = response.json()
             csi_data_id = result.get('id')
+            upload_status = result.get('status', 'unknown')
             logger.info(f"Upload successful: {Path(filepath).name}")
             logger.info(f"CSI data ID: {csi_data_id or 'N/A'}")
-            logger.info(f"Initial status: {result.get('status', 'unknown')}")
+            logger.info(f"Upload status: {upload_status}")
+            logger.info("Server-side analysis has started in the background")
             return result
 
         except Exception as e:
