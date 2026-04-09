@@ -120,7 +120,6 @@ csi-edge-device/
 | `network_interface` | ネットワークインターフェース | `wlan0` |
 | `csi_port` | CSIデータ受信ポート | 5500 |
 | `location` | 設置場所 | `lab` |
-| `delete_after_upload` | 送信後ファイル削除 | false |
 
 ## 使用方法
 
@@ -128,6 +127,7 @@ csi-edge-device/
 
 ```bash
 # 単発でCSIデータ収集・送信
+# 送信成功後、ローカルPCAPは自動削除される
 python3 main.py --mode collect
 ```
 

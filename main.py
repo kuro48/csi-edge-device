@@ -11,6 +11,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import requests
 import urllib3
@@ -35,14 +36,14 @@ class SimpleCSICollector:
         self.data_dir = Path("data")
         self.data_dir.mkdir(exist_ok=True)
 
-        logger.info(f"CSI Collector initialized")
+        logger.info("CSI Collector initialized")
         logger.info(f"Server: {self.config['server_url']}")
         logger.info(f"Device ID: {self.config['device_id']}")
 
     def _load_config(self, config_path: str) -> dict:
         """設定ファイル読み込み"""
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
             logger.info(f"Config loaded from {config_path}")
             return config
@@ -50,7 +51,34 @@ class SimpleCSICollector:
             logger.error(f"Failed to load config: {e}")
             raise
 
-    def collect_csi_data(self) -> str:
+    def _request_kwargs(self, timeout: Optional[int] = None) -> Dict[str, Any]:
+        """HTTPリクエスト共通設定"""
+        return {
+            'timeout': timeout or self.config.get('upload_timeout', 60),
+            'verify': False,
+        }
+
+    def _build_metadata(self) -> Dict[str, Any]:
+        """アップロード用メタデータ作成"""
+        metadata = {
+            'type': 'csi_measurement',
+            'device_id': self.config.get('device_id'),
+            'channel_width': self.config.get('channel_width'),
+            'location': self.config.get('location'),
+            'network_interface': self.config.get('network_interface'),
+            'csi_port': self.config.get('csi_port'),
+        }
+        return {k: v for k, v in metadata.items() if v is not None}
+
+    def _delete_local_file(self, filepath: str) -> None:
+        """送信成功後にローカルPCAPを削除"""
+        try:
+            Path(filepath).unlink(missing_ok=True)
+            logger.info(f"Deleted local file: {filepath}")
+        except Exception as e:
+            logger.warning(f"Failed to delete local file {filepath}: {e}")
+
+    def collect_csi_data(self) -> Optional[str]:
         """CSIデータ収集（tcpdump使用）"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"csi_data_{timestamp}.pcap"
@@ -63,7 +91,6 @@ class SimpleCSICollector:
         logger.info(f"Starting CSI collection: {duration}s on {interface}:{port}")
 
         try:
-            # tcpdumpコマンド実行
             cmd = [
                 'sudo', 'tcpdump',
                 '-i', interface,
@@ -92,44 +119,32 @@ class SimpleCSICollector:
                 size = filepath.stat().st_size
                 logger.info(f"CSI data collected: {filename} ({size} bytes)")
                 return str(filepath)
-            else:
-                logger.error("CSI data file not created or empty")
-                return None
+
+            logger.error("CSI data file not created or empty")
+            return None
 
         except Exception as e:
             logger.error(f"Failed to collect CSI data: {e}")
             return None
 
-    def upload_csi_data(self, filepath: str) -> bool:
+    def upload_csi_data(self, filepath: str) -> Optional[Dict[str, Any]]:
         """CSIデータをサーバーにアップロード"""
         if not filepath or not Path(filepath).exists():
             logger.error("CSI data file not found")
-            return False
+            return None
 
         try:
             server_url = self.config['server_url'].rstrip('/')
             endpoint = f"{server_url}/api/v2/csi-data/upload"
 
-            # ファイルアップロード
             with open(filepath, 'rb') as f:
                 files = {
                     'file': (Path(filepath).name, f, 'application/vnd.tcpdump.pcap')
                 }
-
-                metadata = {
-                    "type": "csi_measurement",
-                    "device_id": self.config.get("device_id"),
-                    "channel_width": self.config.get("channel_width"),
-                    "location": self.config.get("location"),
-                    "network_interface": self.config.get("network_interface"),
-                    "csi_port": self.config.get("csi_port"),
-                }
-                metadata = {k: v for k, v in metadata.items() if v is not None}
-
                 data = {
                     'collection_start_time': datetime.now().isoformat(),
                     'collection_duration': self.config.get('collection_duration', 60),
-                    'metadata': json.dumps(metadata)
+                    'metadata': json.dumps(self._build_metadata())
                 }
 
                 logger.info(f"Uploading to {endpoint}...")
@@ -137,29 +152,30 @@ class SimpleCSICollector:
                     endpoint,
                     files=files,
                     data=data,
-                    timeout=60,
-                    verify=False  # SSL検証を無効化（開発環境用）
+                    **self._request_kwargs()
                 )
 
-                if response.status_code == 200:
-                    result = response.json()
-                    logger.info(f"Upload successful: {Path(filepath).name}")
-                    logger.info(f"Response: {result.get('id', 'Success')}")
-                    return True
-                else:
-                    logger.error(f"Upload failed: {response.status_code} - {response.text}")
-                    return False
+            if response.status_code != 200:
+                logger.error(f"Upload failed: {response.status_code} - {response.text}")
+                return None
+
+            result = response.json()
+            csi_data_id = result.get('id')
+            logger.info(f"Upload successful: {Path(filepath).name}")
+            logger.info(f"CSI data ID: {csi_data_id or 'N/A'}")
+            logger.info(f"Initial status: {result.get('status', 'unknown')}")
+            return result
 
         except Exception as e:
             logger.error(f"Failed to upload CSI data: {e}")
-            return False
+            return None
 
     def test_connection(self) -> bool:
         """サーバーのヘルスチェック"""
         try:
             server_url = self.config['server_url'].rstrip('/')
             endpoint = f"{server_url}/api/v2/health"
-            response = requests.get(endpoint, timeout=10, verify=False)
+            response = requests.get(endpoint, **self._request_kwargs(timeout=10))
             if response.status_code == 200:
                 logger.info("Server health check OK")
                 return True
@@ -177,34 +193,27 @@ class SimpleCSICollector:
             self.run()
             time.sleep(interval)
 
-    def run(self):
+    def run(self) -> bool:
         """CSI収集とアップロードを実行"""
         logger.info("=" * 50)
         logger.info("Starting CSI collection and upload")
         logger.info("=" * 50)
 
-        # CSIデータ収集
         filepath = self.collect_csi_data()
 
-        if filepath:
-            # サーバーにアップロード
-            success = self.upload_csi_data(filepath)
-
-            if success:
-                logger.info("CSI collection and upload completed successfully")
-
-                # 送信成功後、ローカルファイルを削除（オプション）
-                if self.config.get('delete_after_upload', False):
-                    Path(filepath).unlink()
-                    logger.info(f"Deleted local file: {filepath}")
-
-                return True
-            else:
-                logger.error("Upload failed")
-                return False
-        else:
+        if not filepath:
             logger.error("CSI collection failed")
             return False
+
+        result = self.upload_csi_data(filepath)
+        if not result:
+            logger.error("Upload failed")
+            return False
+
+        logger.info("CSI collection and upload completed successfully")
+        self._delete_local_file(filepath)
+
+        return True
 
 
 def main():
